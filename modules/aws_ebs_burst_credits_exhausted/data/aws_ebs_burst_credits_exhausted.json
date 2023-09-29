@@ -1,0 +1,138 @@
+{
+  "name": "aws_ebs_burst_credits_exhausted",
+  "description": "runbook description unknown",
+  "params": [
+    {
+      "name": "EBS_VOLUME_ID",
+      "value": ""
+    },
+    {
+      "name": "AWS_REGION",
+      "value": ""
+    },
+    {
+      "name": "VOLUME_ID",
+      "value": ""
+    },
+    {
+      "name": "INSTANCE_ID",
+      "value": ""
+    },
+    {
+      "name": "METRIC_ID",
+      "value": ""
+    },
+    {
+      "name": "NEW_SIZE",
+      "value": ""
+    },
+    {
+      "name": "REGION",
+      "value": ""
+    },
+    {
+      "name": "HOST_NAME",
+      "value": ""
+    },
+    {
+      "name": "K8S_CLUSTER_NAME",
+      "value": ""
+    },
+    {
+      "name": "NAMESPACE",
+      "value": ""
+    }
+  ],
+  "cells": [
+    {
+      "name": "cell_1",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## AWS EBS Burst Credits Exhausted\nrunbook description unknown"
+    },
+    {
+      "name": "cell_2",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## List all EBS volumes in the current region"
+    },
+    {
+      "name": "cell_3",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `aws ec2 describe-volumes`"
+    },
+    {
+      "name": "cell_4",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Get details about a specific EBS volume using its "
+    },
+    {
+      "name": "cell_5",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `aws ec2 describe-volumes --volume-ids ${VOLUME_ID}`"
+    },
+    {
+      "name": "cell_6",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the burst credit balance for an EBS volume"
+    },
+    {
+      "name": "cell_7",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `aws cloudwatch get-metric-data --metric-data-queries '[{\"Id\":\"${METRIC_ID}\",\"MetricStat\":{\"Metric\":{\"Namespace\":\"AWS/EBS\",\"MetricName\":\"BurstBalance\",\"Dimensions\":[{\"Name\":\"VolumeId\",\"Value\":\"${VOLUME_ID}\"}]},\"Period\":300,\"Stat\":\"Average\"}}]' --start-time $(date -u +%Y-%m-%dT%TZ --date '-10 minutes') --end-time $(date -u +%Y-%m-%dT%TZ)`"
+    },
+    {
+      "name": "cell_8",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the IOPS usage for an EBS volume"
+    },
+    {
+      "name": "cell_9",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `aws cloudwatch get-metric-data --metric-data-queries '[{\"Id\":\"${METRIC_ID}\",\"MetricStat\":{\"Metric\":{\"Namespace\":\"AWS/EBS\",\"MetricName\":\"VolumeReadOps\",\"Dimensions\":[{\"Name\":\"VolumeId\",\"Value\":\"${VOLUME_ID}\"}]},\"Period\":300,\"Stat\":\"Sum\"}},{\"Id\":\"${METRIC_ID}\",\"MetricStat\":{\"Metric\":{\"Namespace\":\"AWS/EBS\",\"MetricName\":\"VolumeWriteOps\",\"Dimensions\":[{\"Name\":\"VolumeId\",\"Value\":\"${VOLUME_ID}\"}]},\"Period\":300,\"Stat\":\"Sum\"}}]' --start-time $(date -u +%Y-%m-%dT%TZ --date '-10 minutes') --end-time $(date -u +%Y-%m-%dT%TZ)`"
+    },
+    {
+      "name": "cell_10",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check the burst credit balance usage for an EC2 instance"
+    },
+    {
+      "name": "cell_11",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `aws cloudwatch get-metric-data --metric-data-queries '[{\"Id\":\"${METRIC_ID}\",\"MetricStat\":{\"Metric\":{\"Namespace\":\"AWS/EBS\",\"MetricName\":\"BurstBalance\",\"Dimensions\":[{\"Name\":\"InstanceId\",\"Value\":\"${INSTANCE_ID}\"}]},\"Period\":300,\"Stat\":\"Average\"}}]' --start-time $(date -u +%Y-%m-%dT%TZ --date '-10 minutes') --end-time $(date -u +%Y-%m-%dT%TZ)`"
+    },
+    {
+      "name": "cell_12",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## The application or system that is using the EBS volume is experiencing a sudden spike in traffic or usage, causing it to perform more I/O operations than usual."
+    },
+    {
+      "name": "cell_13",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_aws_ebs_credit_notification($EBS_VOLUME_ID, $AWS_REGION, $REGION)"
+    },
+    {
+      "name": "cell_14",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Increase the volume size or switch to a provisioned IOPS volume to prevent burst credit exhaustion."
+    },
+    {
+      "name": "cell_15",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_resize_volume($VOLUME_ID, $INSTANCE_ID, $NEW_SIZE, $REGION)"
+    }
+  ]
+}
